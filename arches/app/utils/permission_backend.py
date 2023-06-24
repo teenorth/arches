@@ -1,4 +1,4 @@
-from abc import abstractmethod
+from abc import abstractmethod, ABCMeta
 import inspect
 
 from arches.app.models.models import *
@@ -270,4 +270,71 @@ class PermissionFramework(metaclass=ABCMeta):
     @abstractmethod
     def get_nodegroups_by_perm(self, user, perms, any_perm=True):
         ...
-c
+
+    @abstractmethod
+    def get_map_layers_by_perm(self, user, perms, any_perm=True):
+        ...
+
+    @abstractmethod
+    def user_can_read_map_layers(self, user):
+        ...
+
+    @abstractmethod
+    def user_can_write_map_layers(self, user):
+        ...
+
+    @abstractmethod
+    def process_new_user(self, instance, created):
+        ...
+
+_PERMISSION_FRAMEWORK = None
+
+def _get_permission_framework():
+    global _PERMISSION_FRAMEWORK
+    if not _PERMISSION_FRAMEWORK:
+        if settings.PERMISSION_FRAMEWORK == "arches_default_deny":
+            from arches.app.utils.permissions.arches_standard import ArchesDefaultDenyPermissionFramework
+            _PERMISSION_FRAMEWORK = ArchesDefaultDenyPermissionFramework()
+        else:
+            from arches.app.utils.permissions.arches_standard import ArchesStandardPermissionFramework
+            _PERMISSION_FRAMEWORK = ArchesStandardPermissionFramework()
+    return _PERMISSION_FRAMEWORK
+
+def assign_perm(perm, user_or_group, obj=None):
+    return _get_permission_framework().assign_perm(perm, user_or_group, obj=obj)
+
+def remove_perm(perm, user_or_group=None, obj=None):
+    return _get_permission_framework().remove_perm(perm, user_or_group=user_or_group, obj=obj)
+
+def _get_permission_backend():
+    return _get_permission_framework().get_permission_backend()
+
+def get_restricted_users(resource):
+    return _get_permission_framework().get_restricted_users(resource)
+
+def get_restricted_instances(user, search_engine=None, allresources=False):
+    return _get_permission_framework().get_restricted_instances(user, search_engine=search_engine, allresources=allresources)
+
+def get_groups_for_object(perm, obj):
+    return _get_permission_framework().get_groups_for_object(perm, obj)
+
+def get_users_for_object(perm, obj):
+    return _get_permission_framework().get_users_for_object(perm, obj)
+
+def check_resource_instance_permissions(user, resourceid, permission):
+    return _get_permission_framework().check_resource_instance_permissions(user, resourceid, permission)
+
+def get_nodegroups_by_perm(user, perms, any_perm=True):
+    return _get_permission_framework().get_nodegroups_by_perm(user, perms, any_perm=any_perm)
+
+def get_map_layers_by_perm(user, perms, any_perm=True):
+    return _get_permission_framework().get_map_layers_by_perm(user, perms, any_perm=any_perm)
+
+def user_can_read_map_layers(user):
+    return _get_permission_framework().user_can_read_map_layers(user)
+
+def user_can_write_map_layers(user):
+    return _get_permission_framework().user_can_write_map_layers(user)
+
+def process_new_user(instance, created):
+    return _get_permission_framework().process_new_user(instance, created)
