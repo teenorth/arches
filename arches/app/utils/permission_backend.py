@@ -11,8 +11,16 @@ from guardian.shortcuts import (
     get_user_perms,
     get_users_with_perms,
 )
+from guardian.exceptions import NotUserNorGroup
+from guardian.shortcuts import (
+    get_perms,
+    get_group_perms,
+    get_user_perms,
+    get_users_with_perms,
+)
 from guardian.models import GroupObjectPermission, UserObjectPermission
 from guardian.exceptions import WrongAppError
+from guardian.shortcuts import assign_perm, get_perms, remove_perm, get_group_perms, get_user_perms
 from django.contrib.auth.models import User, Group
 from django.contrib.gis.db.models import Model
 from django.core.cache import caches
