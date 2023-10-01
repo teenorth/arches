@@ -104,9 +104,9 @@ ELASTICSEARCH_CUSTOM_INDEXES = []
 #     'should_update_asynchronously': False
 # }]
 
-THUMBNAIL_GENERATOR = None #"arches.app.utils.thumbnail_generator.ThumbnailGenerator"
-GENERATE_THUMBNAILS_ON_DEMAND = False # True to generate a thumnail on request if it doens't exist
-MIN_FILE_SIZE_T0_GENERATE_THUMBNAIL = 150000 # yet to be implemented, in bytes eg: 150000 = 150kb
+THUMBNAIL_GENERATOR = None  # "arches.app.utils.thumbnail_generator.ThumbnailGenerator"
+GENERATE_THUMBNAILS_ON_DEMAND = False  # True to generate a thumnail on request if it doens't exist
+MIN_FILE_SIZE_T0_GENERATE_THUMBNAIL = 150000  # yet to be implemented, in bytes eg: 150000 = 150kb
 
 # This should point to the url where you host your site
 # Make sure to use a trailing slash
@@ -329,8 +329,9 @@ OAUTH_CLIENT_ID = ""  # '9JCibwrWQ4hwuGn5fu2u1oRZSs9V6gK8Vu8hpRC4'
 AUTHENTICATION_BACKENDS = (
     "arches.app.utils.email_auth_backend.EmailAuthenticationBackend",
     "oauth2_provider.backends.OAuth2Backend",
+    "dauthz.backends.CasbinBackends",
     "django.contrib.auth.backends.ModelBackend",  # this is default
-    "arches.app.utils.permission_backend.PermissionBackend",
+    # "arches.app.utils.permission_backend.PermissionBackend",
     "arches.app.utils.external_oauth_backend.ExternalOauthAuthenticationBackend",
 )
 
@@ -352,6 +353,8 @@ INSTALLED_APPS = (
     "corsheaders",
     "oauth2_provider",
     "django_celery_results",
+    "compressor",
+    "dauthz.apps.DauthzConfig",
 )
 
 MIDDLEWARE = [
@@ -367,6 +370,7 @@ MIDDLEWARE = [
     "django.contrib.auth.middleware.AuthenticationMiddleware",
     "django.contrib.messages.middleware.MessageMiddleware",
     # "django.middleware.clickjacking.XFrameOptionsMiddleware",
+    "dauthz.middlewares.request_middleware.RequestMiddleware",
     "arches.app.utils.middleware.SetAnonymousUser",
 ]
 
@@ -495,10 +499,7 @@ DEFAULT_RESOURCE_IMPORT_USER = {"username": "admin", "userid": 1}
 TIMEWHEEL_DATE_TIERS = None
 
 # Identify the usernames and duration (seconds) for which you want to cache the timewheel
-CACHE_BY_USER = {
-    "default": 3600 * 24, #24hrs
-    "anonymous": 3600 * 24 #24hrs
-    }
+CACHE_BY_USER = {"default": 3600 * 24, "anonymous": 3600 * 24}  # 24hrs  # 24hrs
 
 BYPASS_UNIQUE_CONSTRAINT_TILE_VALIDATION = False
 BYPASS_REQUIRED_VALUE_TILE_VALIDATION = False
@@ -696,7 +697,7 @@ ACCESSIBILITY_MODE = False
 with suppress(NameError):  # need to suppress i18n NameError for test runner
     EXTRA_EMAIL_CONTEXT = {
         "salutation": _("Hi"),
-        "expiration":(datetime.now() + timedelta(seconds=CELERY_SEARCH_EXPORT_EXPIRES)).strftime("%A, %d %B %Y")
+        "expiration": (datetime.now() + timedelta(seconds=CELERY_SEARCH_EXPORT_EXPIRES)).strftime("%A, %d %B %Y"),
     }
 
 RENDERERS = [
@@ -761,7 +762,31 @@ JSON_LD_SORT_FUNCTIONS = [lambda x: x.get("@id", "~")]
 def JSON_LD_FIX_DATA_FUNCTION(data, jsdata, model):
     return jsdata
 
+
 PERMISSION_FRAMEWORK = "arches_standard.ArchesStandardPermissionFramework"
+CASBIN_MODEL = os.path.join(os.path.dirname(os.path.abspath(__file__)), "app", "permissions", "casbin.conf")
+
+DAUTHZ = {
+    # DEFAULT Dauthz enforcer
+    "DEFAULT": {
+        # Casbin model setting.
+        "MODEL": {
+            # Available Settings: "file", "text"
+            "CONFIG_TYPE": "file",
+            "CONFIG_FILE_PATH": CASBIN_MODEL,
+            "CONFIG_TEXT": "",
+        },
+        # Casbin adapter .
+        "ADAPTER": {
+            "NAME": "casbin_adapter.adapter.Adapter",
+            # 'OPTION_1': '',
+        },
+        "LOG": {
+            # Changes whether Dauthz will log messages to the Logger.
+            "ENABLED": False,
+        },
+    },
+}
 
 ##########################################
 ### END RUN TIME CONFIGURABLE SETTINGS ###

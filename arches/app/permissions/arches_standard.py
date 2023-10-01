@@ -1,4 +1,5 @@
 from django.core.exceptions import ObjectDoesNotExist
+from arches.app.models.system_settings import settings
 from django.contrib.auth.models import User, Group
 from django.contrib.gis.db.models import Model
 from django.core.cache import caches
