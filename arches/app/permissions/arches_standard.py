@@ -54,7 +54,7 @@ class ArchesStandardPermissionFramework(PermissionFramework):
     def get_user_perms(self, user, obj):
         return get_user_perms(user, obj)
 
-    def process_new_user(self, user):
+    def process_new_user(self, instance, created):
         ct = ContentType.objects.get(app_label="models", model="resourceinstance")
         resourceInstanceIds = list(GroupObjectPermission.objects.filter(content_type=ct).values_list("object_pk", flat=True).distinct())
         for resourceInstanceId in resourceInstanceIds:
