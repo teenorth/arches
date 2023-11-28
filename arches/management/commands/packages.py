@@ -218,6 +218,15 @@ class Command(BaseCommand):
         )
 
         parser.add_argument(
+            "-bd",
+            "--no-business_data",
+            action="store_false",
+            dest="include_business_data",
+            help="Bulk load values into the database.  By setting this flag the system will bypass any PreSave \
+            functions attached to the resource, as well as prevent some logging statements from printing to console.",
+        )
+
+        parser.add_argument(
             "-di",
             "--defer_indexing",
             action="store",
@@ -266,7 +275,7 @@ class Command(BaseCommand):
         if options["operation"] is None:
             self.print_help("manage.py", "packages")
             return
-        
+
         print("operation: " + options["operation"])
         package_name = settings.PACKAGE_NAME
         celery_worker_running = task_management.check_if_celery_available()
@@ -333,6 +342,7 @@ class Command(BaseCommand):
                 )
             except Exception as exc:
                 import traceback
+
                 traceback.print_exception()
                 raise
 
@@ -389,6 +399,7 @@ class Command(BaseCommand):
                 options["yes"],
                 options["dev"],
                 False if str(options["defer_indexing"])[0].lower() == "f" else True,
+                options["include_business_data"],
                 False if arches_application_path is None else True,
             )
 
@@ -572,6 +583,7 @@ class Command(BaseCommand):
         yes=False,
         dev=False,
         defer_indexing=True,
+        include_business_data=True,
         is_application=False,
     ):
         celery_worker_running = task_management.check_if_celery_available()
@@ -762,12 +774,7 @@ class Command(BaseCommand):
 
                 return None
 
-
-            erring_csvs = [
-                path
-                for path in business_data
-                if _path_to_mapping(path) is False
-            ]
+            erring_csvs = [path for path in business_data if _path_to_mapping(path) is False]
             message = (
                 f"The following .csv files will not load because they are missing accompanying .mapping files: \n\t {','.join(erring_csvs)}"
             )
@@ -785,11 +792,7 @@ class Command(BaseCommand):
                 from celery import chord
                 from arches.app.tasks import import_business_data, package_load_complete, on_chord_error
 
-                valid_resource_paths = [
-                    path
-                    for path in business_data
-                    if (_path_to_mapping(path) is False) or (".json" in path)
-                ]
+                valid_resource_paths = [path for path in business_data if (_path_to_mapping(path) is False) or (".json" in path)]
 
                 # assumes resources in csv do not depend on data being loaded prior from json in same dir
                 chord(
@@ -1007,8 +1010,13 @@ class Command(BaseCommand):
         load_map_layers(package_location)
         print("loading search indexes")
         load_indexes(package_location)
-        print("loading business data - resource instances and relationships")
-        load_business_data(package_location, defer_indexing)
+
+        if include_business_data:
+            print("loading business data - resource instances and relationships")
+            load_business_data(package_location, defer_indexing)
+        else:
+            print("skipping business data - resource instances and relationships - as requested")
+
         print("loading resource views")
         load_resource_views(package_location)
         print("loading apps")
