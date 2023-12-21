@@ -328,8 +328,8 @@ class StringDataType(BaseDataType):
 
     def get_display_value(self, tile, node, **kwargs):
         data = self.get_tile_data(tile)
-        parametersed_language = kwargs.pop("language", None)
-        current_language = parametersed_language or get_language()
+        requested_language = kwargs.pop("language", None)
+        current_language = requested_language or get_language()
         if not current_language:
             current_language = settings.LANGUAGE_CODE
         if data:
@@ -1482,19 +1482,19 @@ class FileListDataType(BaseDataType):
         super(FileListDataType, self).__init__(model=model)
         self.node_lookup = {}
 
-    def validate_file_types(self, parameters=None, nodeid=None):
+    def validate_file_types(self, request=None, nodeid=None):
         errors = []
         validator = FileValidator()
-        files = parameters.FILES.getlist("file-list_" + nodeid, [])
+        files = request.FILES.getlist("file-list_" + nodeid, [])
         for file in files:
             errors = errors + validator.validate_file_type(file.file, file.name.split(".")[-1])
         return errors
 
-    def validate(self, value, row_number=None, source=None, node=None, nodeid=None, strict=False, path=None, parameters=None, **kwargs):
+    def validate(self, value, row_number=None, source=None, node=None, nodeid=None, strict=False, path=None, request=None, **kwargs):
         errors = []
         file_type_errors = []
-        if parameters:
-            file_type_errors = errors + self.validate_file_types(parameters, str(node.pk))
+        if request:
+            file_type_errors = errors + self.validate_file_types(request, str(node.pk))
 
         if len(file_type_errors) > 0:
             title = _("Invalid File Type")
@@ -1609,14 +1609,20 @@ class FileListDataType(BaseDataType):
         if data:
             return self.compile_json(tile, node, file_details=data[str(node.nodeid)])
 
-    def post_tile_save(self, tile, nodeid, parameters):
+    def post_tile_save(self, tile, nodeid, parameters, user=None):
         if parameters is not None:
             # this does not get called when saving data from the mobile app
             previously_saved_tile = models.TileModel.objects.filter(pk=tile.tileid)
-            user = parameters.user
-            if hasattr(parameters.user, "userprofile") is not True:
-                models.UserProfile.objects.create(user=parameters.user)
-            user_is_reviewer = user_is_resource_reviewer(parameters.user)
+            user_is_reviewer = False
+            if user is True:
+                user_is_reviewer = True
+            elif user:
+                if hasattr(parameters.user, "userprofile") is not True:
+                    models.UserProfile.objects.create(user=parameters.user)
+                user_is_reviewer = user_is_resource_reviewer(parameters.user)
+            else:
+                # There must be a user to be able to upload files.
+                return
             current_tile_data = self.get_tile_data(tile)
             if previously_saved_tile.count() == 1:
                 previously_saved_tile_data = self.get_tile_data(previously_saved_tile[0])
@@ -1633,7 +1639,7 @@ class FileListDataType(BaseDataType):
                             except models.File.DoesNotExist:
                                 logger.exception(_("File does not exist"))
 
-            files = parameters.FILES.getlist("file-list_" + nodeid + "_preloaded", []) + parameters.FILES.getlist("file-list_" + nodeid, [])
+            files = parameters["FILES"].getlist("file-list_" + nodeid + "_preloaded", []) + parameters["FILES"].getlist("file-list_" + nodeid, [])
             tile_exists = models.TileModel.objects.filter(pk=tile.tileid).exists()
 
             for file_data in files:
@@ -2284,7 +2290,7 @@ class ResourceInstanceDataType(BaseDataType):
             for relationship in relationships:
                 relationship["resourceXresourceId"] = str(uuid.uuid4())
 
-    def post_tile_save(self, tile, nodeid, parameters):
+    def post_tile_save(self, tile, nodeid, parameters, user):
         ret = False
         sql = """
             SELECT * FROM __arches_create_resource_x_resource_relationships('%s') as t;
