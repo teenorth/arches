@@ -1,7 +1,6 @@
 from arches.app.permissions.arches_standard import ArchesStandardPermissionFramework
-from arches.app.search.components.resource_type_filter import get_permitted_graphids
 
-class ArchesDefaultDenyPermissionFramework(ArchesStandardPermissionFramework):
+class ArchesAllowWithCredentialsFramework(ArchesStandardPermissionFramework):
     def get_sets_for_user(self, user, perm):
         # We do not do set filtering - None is allow-all for sets.
         return None if user and user.username != "anonymous" else set()
@@ -10,11 +9,9 @@ class ArchesDefaultDenyPermissionFramework(ArchesStandardPermissionFramework):
         result = super().check_resource_instance_permissions(user, resourceid, permission)
 
         if result and result.get("permitted", None) is not None:
-            # This is a safety check - we don't want an unpermissioned user
-            # defaulting to having access (allowing anonymous users is still
-            # possible by assigning appropriate group permissions).
             if result["permitted"] == "unknown":
-                result["permitted"] = False
+                if not user or user.username == "anonymous":
+                    result["permitted"] = False
             elif result["permitted"] == False:
 
                 # This covers the case where one group denies permission and another

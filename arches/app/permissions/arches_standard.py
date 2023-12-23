@@ -200,7 +200,6 @@ class ArchesStandardPermissionFramework(PermissionFramework):
 
         except ObjectDoesNotExist:
             result["permitted"] = True # if the object does not exist, no harm in returning true - this prevents strange 403s.
-            return None
 
         return result
 
