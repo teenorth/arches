@@ -412,7 +412,8 @@ class Tile(models.TileModel):
         try:
             if user is None and request is not None:
                 user = request.user
-            user_is_reviewer = user_is_resource_reviewer(user)
+            if user is not None:
+                user_is_reviewer = user_is_resource_reviewer(user)
         except AttributeError:  # no user - probably importing data
             user = None
 
@@ -519,7 +520,10 @@ class Tile(models.TileModel):
             tile.delete(*args, request=request, **kwargs)
         try:
             user = request.user
-            user_is_reviewer = user_is_resource_reviewer(user)
+            if user is not None:
+                user_is_reviewer = user_is_resource_reviewer(user)
+            else:
+                user_is_reviewer = True
         except AttributeError:  # no user
             user = None
             user_is_reviewer = True
