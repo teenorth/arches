@@ -81,6 +81,7 @@ class Command(BaseCommand):
                 "load_concept_scheme",
                 "export_business_data",
                 "export_graphs",
+                "list_mapbox_layer",
                 "delete_mapbox_layer",
                 "create_mapping_file",
                 "import_reference_data",
@@ -204,6 +205,9 @@ class Command(BaseCommand):
         )
 
         parser.add_argument("-b", "--is_basemap", action="store_true", dest="is_basemap", help="Add to make the layer a basemap.")
+        parser.add_argument(
+            "-S", "--strict", action="store_true", dest="strict", help="Whether all errors should raise exceptions, if possible."
+        )
 
         parser.add_argument("-db", "--setup_db", action="store_true", dest="setup_db", default=False, help="Rebuild database")
         parser.add_argument("-dev", "--dev", action="store_true", dest="dev", help="Loading package for development")
@@ -374,10 +378,14 @@ class Command(BaseCommand):
                 options["mapbox_json_path"],
                 options["layer_icon"],
                 options["is_basemap"],
+                strict=options["strict"],
             )
 
+        if options["operation"] == "list_mapbox_layer":
+            self.list_mapbox_layer()
+
         if options["operation"] == "delete_mapbox_layer":
-            self.delete_mapbox_layer(options["layer_name"])
+            self.delete_mapbox_layer(options["layer_name"], strict=options["strict"])
 
         if options["operation"] == "create_mapping_file":
             self.create_mapping_file(options["dest_dir"], options["graphs"])
@@ -788,7 +796,7 @@ class Command(BaseCommand):
                     print("Aborting operation: Package Load")
                     sys.exit()
 
-            if celery_worker_running:
+            if celery_worker_running and False:
                 from celery import chord
                 from arches.app.tasks import import_business_data, package_load_complete, on_chord_error
 
@@ -1372,13 +1380,7 @@ class Command(BaseCommand):
             utils.print_message("No destination directory specified. Please rerun this command with the '-d' parameter populated.")
             sys.exit()
 
-    def add_mapbox_layer(
-        self,
-        layer_name=False,
-        mapbox_json_path=False,
-        layer_icon="fa fa-globe",
-        is_basemap=False,
-    ):
+    def add_mapbox_layer(self, layer_name=False, mapbox_json_path=False, layer_icon="fa fa-globe", is_basemap=False, strict=False):
         if layer_name is not False and mapbox_json_path is not False:
             with open(mapbox_json_path) as data_file:
                 data = json.load(data_file)
@@ -1414,13 +1416,21 @@ class Command(BaseCommand):
                         map_layer.save()
                     except IntegrityError as e:
                         print("Cannot save layer: {0} already exists".format(layer_name))
+        elif strict:
+            raise RuntimeError("Require layer name and mapbox JSON path")
 
-    def delete_mapbox_layer(self, layer_name=False):
+    def list_mapbox_layer(self):
+        for mapbox_layer in models.MapLayer.objects.all():
+            print(mapbox_layer.name)
+
+    def delete_mapbox_layer(self, layer_name=False, strict=False):
         if layer_name is not False:
             try:
                 mapbox_layer = models.MapLayer.objects.get(name=layer_name)
             except ObjectDoesNotExist:
                 print('error: no mapbox layer named "{}"'.format(layer_name))
+                if strict:
+                    raise
                 return
             all_sources = [i.get("source") for i in mapbox_layer.layerdefinitions]
             # remove duplicates and None
@@ -1430,6 +1440,8 @@ class Command(BaseCommand):
                     src = models.MapSource.objects.get(name=source)
                     src.delete()
                 mapbox_layer.delete()
+        elif strict:
+            raise RuntimeError("Layer name must be supplied")
 
     def create_mapping_file(self, dest_dir=None, graphs=None):
         if graphs is not False:

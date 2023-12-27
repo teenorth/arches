@@ -114,7 +114,8 @@ class SearchView(MapBaseManagerView):
             "title": _("Searching the Database"),
             "templates": ["search-help"],
         }
-        context["celery_running"] = task_management.check_if_celery_available()
+        # PTW: This adds around a second to a request, but seems to be informational?
+        # context["celery_running"] = task_management.check_if_celery_available()
         context["export_html_templates"] = HtmlWriter.get_graphids_with_export_template()
 
         return render(request, "views/search.htm", context)
@@ -495,7 +496,7 @@ def get_provisional_type(provisional_filter, user):
 
 
 def get_permitted_nodegroups(user):
-    return [str(nodegroup.pk) for nodegroup in get_nodegroups_by_perm(user, "models.read_nodegroup")]
+    return get_nodegroups_by_perm(user, "models.read_nodegroup")
 
 
 def buffer(request):
