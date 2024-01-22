@@ -1,5 +1,5 @@
 from django.core.exceptions import ObjectDoesNotExist
-from arches.app.models.system_settings import settings
+from arches.app.models.system_settings import settings, SystemSettings
 from django.contrib.auth.models import User, Group
 from django.contrib.gis.db.models import Model
 from django.core.cache import caches
@@ -150,7 +150,7 @@ class ArchesStandardPermissionFramework(PermissionFramework):
         any_perm -- True to check ANY perm in "perms" or False to check ALL perms
 
         """
-        return set(str(nodegroup.pk) for nodegroup in get_nodegroups_by_perm_for_user_or_group(user, perms, any_perm=any_perm))
+        return list(set(str(nodegroup.pk) for nodegroup in get_nodegroups_by_perm_for_user_or_group(user, perms, any_perm=any_perm)))
 
     def check_resource_instance_permissions(self, user, resourceid, permission):
         """
@@ -395,8 +395,8 @@ class ArchesStandardPermissionFramework(PermissionFramework):
         graphs = set()
         nodegroups = self.get_nodegroups_by_perm(user, perms)
         for node in Node.objects.filter(nodegroup__in=nodegroups).prefetch_related("graph"):
-            if node.graph.isresource and str(node.graph_id) != settings.SYSTEM_SETTINGS_RESOURCE_MODEL_ID:
-                graphs.add(node.graph)
+            if node.graph.isresource and str(node.graph_id) != SystemSettings.SYSTEM_SETTINGS_RESOURCE_MODEL_ID:
+                graphs.add(str(node.graph.pk))
         return list(graphs)
 
 
