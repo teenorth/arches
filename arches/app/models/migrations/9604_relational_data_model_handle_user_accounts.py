@@ -4,7 +4,7 @@ from django.db import migrations, models
 class Migration(migrations.Migration):
 
     dependencies = [
-        ("models", "10121_workflowhistory"),
+        ("models", "9945_file_thumbnail_bin_file_thumbnail_text"),
     ]
 
     operations = [
