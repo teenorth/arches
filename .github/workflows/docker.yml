@@ -2,8 +2,8 @@ name: Build Arches base
 run-name: Build Arches base
 on: [push]
 env:
-  ARCHES_BASE: flaxandteal/arches-base
-  ARCHES_VERSION: "7.5-dev"
+  ARCHES_BASE: teenorth/arches-base
+  ARCHES_VERSION: "7.6-dev"
   REGISTRY: ghcr.io
 jobs:
   Build-Arches:
